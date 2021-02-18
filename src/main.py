@@ -82,7 +82,12 @@ def add_song_inline(update, context):
     args = (update.message.text).split(' ')
 
     if len(args) < 2:
-        update.message.reply_text('Should have the format: @spotidude SPOTIFY_SONG_URL')
+        return
+
+    if len(args) > 2:
+        return
+
+    if args[0] != '@spotidude':
         return
 
     try:
