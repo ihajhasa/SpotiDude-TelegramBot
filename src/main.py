@@ -87,7 +87,7 @@ def add_song_inline(update, context):
     if len(args) > 2:
         return
 
-    if args[0] != '@spotidude':
+    if args[0] != '@spotidudebot':
         return
 
     try:
