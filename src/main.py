@@ -11,6 +11,12 @@ import loadsave
 BOT_TOKEN = config('BOT_TOKEN')
 bot = telegram.Bot(token=BOT_TOKEN)
 
+
+STATIC_MESSAGES = {
+    'no_playlist': 'This chat does not have a playlist. Run /create_playlist <PLAYLIST_NAME> to create a playlist for this chat.',
+    'deleted_playlist': 'This chat\'s playlist has been deleted.',
+}
+
 # DEFAULT_PLAYLIST = config('DEFAULT_PLAYLIST')
 
 CLIENT_ID = config('CLIENT_ID')
@@ -49,8 +55,15 @@ def add_song(update, context):
     if update.effective_chat.id == None:
         update.effective_chat.id = 'null'
 
+
+    group_id = update.effective_chat.id
+
+    if group_id not in PLAYLISTS.keys():
+        update.message.reply_text(STATIC_MESSAGES['no_playlist'])
+        return
+
     try:
-        playlist = PLAYLISTS[update.effective_chat.id]
+        playlist = PLAYLISTS[group_id]
         playlist_id = playlist[1]
     except:
         update.message.reply_text('ERROR ADDING SONG PLEASE NOTIFY ME')
@@ -90,8 +103,15 @@ def add_song_inline(update, context):
     if args[0] != '@spotidudebot':
         return
 
+
+    group_id = update.effective_chat.id
+
+    if group_id not in PLAYLISTS.keys():
+        update.message.reply_text(STATIC_MESSAGES['no_playlist'])
+        return
+
     try:
-        playlist = PLAYLISTS[update.effective_chat.id]
+        playlist = PLAYLISTS[group_id]
         playlist_id = playlist[1]
     except:
         update.message.reply_text('ERROR ADDING SONG PLEASE NOTIFY ME')
@@ -126,7 +146,7 @@ def create_playlist(update, context):
     if update.effective_chat.id == None:
         update.effective_chat.id = 'null'
 
-    playlist_name = context.args[0]
+    playlist_name = ' '.join(context.args)
 
     if(update.effective_chat.id in PLAYLISTS.keys()):
         update.message.reply_text('This group already has a playlist')
@@ -145,11 +165,39 @@ def create_playlist(update, context):
     update.message.reply_text('Created new playlist with the name:\t' +  playlist_name)
 
 
-def get_playlists():
-    playlists = sp.user_playlists(username)
+def get_playlist(update, context):
+    group_id = update.effective_chat.id
 
-    for playlist in playlists['items']:
-        print(playlist['name'])
+    if group_id in PLAYLISTS.keys():
+        update.message.reply_text('https://open.spotify.com/playlist/' + PLAYLISTS[group_id][1])
+    else:
+        update.message.reply_text(STATIC_MESSAGES['no_playlist'])
+
+def delete_playlist(update, context):
+    # spotify has no endpoint to delete playlists, so basically what this will do is clear the playlist data
+    # stored for the group.
+
+    # Todo: add an inline confirmation to make sure this isnt pressed accidentally.
+    #   For now I wont list this command so it has to be fully typed by the user.
+
+    group_id = update.effective_chat.id
+
+    if group_id not in PLAYLISTS.keys():
+        update.message.reply_text(STATIC_MESSAGES['no_playlist'])
+        return
+
+    playlist_id = PLAYLISTS[group_id][1]
+    sp.current_user_unfollow_playlist(playlist_id)
+    del PLAYLISTS[group_id]
+
+    with open('deleted_playlist_data.txt', 'a') as f:
+        f.write(str(group_id) + '\t' + str(playlist_id) + '\n')
+
+    loadsave.save_playlists(PLAYLISTFILENAME, PLAYLISTS)
+    update.message.reply_text(STATIC_MESSAGES['deleted_playlist'])
+
+
+
 
 
 def main():
@@ -157,10 +205,11 @@ def main():
     dispatcher = updater.dispatcher
 
     dispatcher.add_handler(CommandHandler("start", start))
-
+    dispatcher.add_handler(CommandHandler("get_playlist", get_playlist))
+    dispatcher.add_handler(CommandHandler("delete_playlist", delete_playlist))
     dispatcher.add_handler(CommandHandler("add_song", add_song, pass_args=True, pass_chat_data=True))
-
     dispatcher.add_handler(CommandHandler("create_playlist", create_playlist, pass_args=True, pass_chat_data=True, pass_user_data=True))
+
 
     dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, add_song_inline))
 
