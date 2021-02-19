@@ -205,6 +205,13 @@ def cancel_action(update, context):
     )
 
 def delete(update, context):
+    
+    group_id = update.effective_chat.id
+
+    if group_id not in PLAYLISTS.keys():
+        update.message.reply_text(STATIC_MESSAGES['no_playlist'])
+        return
+
     keyboard = [
         [
             InlineKeyboardButton('YES', callback_data='delete_playlist.True'),
