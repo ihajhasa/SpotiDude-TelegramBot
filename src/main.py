@@ -2,8 +2,8 @@ import telegram
 from decouple import config
 import logging
 
-from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import Updater, CommandHandler, CallbackQueryHandler,  MessageHandler, Filters
 
 import spotifyfunc as spotify
 import loadsave
@@ -44,7 +44,6 @@ def start(update, context):
     if update == None or update.message == None:
         return
     update.message.reply_text('That\'s just like, your opinion, man')
-
 
 def add_song(update, context):
 
@@ -88,8 +87,6 @@ def add_song(update, context):
 
     loadsave.save_playlists(GROUPSONGSPATH + str(playlist_id) + '.txt', groupsongs)
     update.message.reply_text('Added song to playlist: ' + playlist[0])
-
-
 
 def add_song_inline(update, context):
     args = (update.message.text).split(' ')
@@ -137,7 +134,6 @@ def add_song_inline(update, context):
     loadsave.save_playlists(GROUPSONGSPATH + str(playlist_id) + '.txt', groupsongs)
     update.message.reply_text('Added song to playlist: ' + playlist[0])
 
-
 def create_playlist(update, context):
     if len(context.args) == 0:
         update.message.reply_text('Please pass playlist name')
@@ -164,7 +160,6 @@ def create_playlist(update, context):
 
     update.message.reply_text('Created new playlist with the name:\t' +  playlist_name)
 
-
 def get_playlist(update, context):
     group_id = update.effective_chat.id
 
@@ -180,6 +175,9 @@ def delete_playlist(update, context):
     # Todo: add an inline confirmation to make sure this isnt pressed accidentally.
     #   For now I wont list this command so it has to be fully typed by the user.
 
+    query = update.callback_query
+    query.answer()
+
     group_id = update.effective_chat.id
 
     if group_id not in PLAYLISTS.keys():
@@ -194,11 +192,29 @@ def delete_playlist(update, context):
         f.write(str(group_id) + '\t' + str(playlist_id) + '\n')
 
     loadsave.save_playlists(PLAYLISTFILENAME, PLAYLISTS)
-    update.message.reply_text(STATIC_MESSAGES['deleted_playlist'])
 
+    query.edit_message_text(
+        text="Deleted Playlist!!!!!"
+    )
 
+def cancel_action(update, context):
+    query = update.callback_query
+    query.answer()
+    query.edit_message_text(
+        text="Canceled Action"
+    )
 
+def delete(update, context):
+    keyboard = [
+        [
+            InlineKeyboardButton('YES', callback_data='delete_playlist.True'),
+            InlineKeyboardButton('NO', callback_data='delete_playlist.False')
+        ]
+    ]
 
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    update.message.reply_text(text="Confirm DELETING the group playlist", reply_markup=reply_markup)
+    return
 
 def main():
     updater = Updater(BOT_TOKEN, use_context=True)
@@ -206,7 +222,12 @@ def main():
 
     dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(CommandHandler("get_playlist", get_playlist))
-    dispatcher.add_handler(CommandHandler("delete_playlist", delete_playlist))
+
+    dispatcher.add_handler(CommandHandler("delete", delete))
+
+    dispatcher.add_handler(CallbackQueryHandler(delete_playlist, pattern='delete_playlist.True'))
+    dispatcher.add_handler(CallbackQueryHandler(cancel_action, pattern='[\w]+.False'))
+
     dispatcher.add_handler(CommandHandler("add_song", add_song, pass_args=True, pass_chat_data=True))
     dispatcher.add_handler(CommandHandler("create_playlist", create_playlist, pass_args=True, pass_chat_data=True, pass_user_data=True))
 

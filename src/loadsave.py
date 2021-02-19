@@ -20,5 +20,5 @@ def load_playlists(FILENAME, PLAYLIST):
 def save_playlists(FILENAME, PLAYLIST):
     with open(FILENAME, 'w') as outfile:
         outfile.truncate(0)
-        json.dump(PLAYLIST, outfile)
+        json.dump(PLAYLIST, outfile, indent=4)
         outfile.close()
