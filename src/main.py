@@ -45,6 +45,23 @@ def start(update, context):
         return
     update.message.reply_text('That\'s just like, your opinion, man')
 
+
+def get_track_id(url):
+    url = url.split('/')
+
+    i = 0
+    while (i < len(url)):
+        if url[i] == 'track' and (i < len(url) - 1):
+            track_id = url[i+1]
+            if '?' in track_id:
+                return track_id.split('?')[0]
+            else:
+                return track_id
+
+        i += 1
+
+    return None
+
 def add_song(update, context):
 
     if len(context.args) == 0:
@@ -69,8 +86,13 @@ def add_song(update, context):
         return
 
 
-    song = context.args[0].split('/')[4]
-    song = [song.split('?')[0]]
+    song = get_track_id(context.args[0])
+
+    if song == None:
+        update.message.reply_text('This is not a proper url')
+        return
+
+    song = [song]
 
     groupsongs = loadsave.load_groupsongs(GROUPSONGSPATH + str(playlist_id))
 
@@ -115,8 +137,13 @@ def add_song_inline(update, context):
         return
 
     song = args[1]
-    song = song.split('/')[4]
-    song = [song.split('?')[0]]
+    song = get_track_id(song)
+
+    if song == None:
+        update.message.reply_text('This is not a proper url')
+        return
+
+    song = [song]
 
     groupsongs = loadsave.load_groupsongs(GROUPSONGSPATH + str(playlist_id))
 
@@ -205,7 +232,7 @@ def cancel_action(update, context):
     )
 
 def delete(update, context):
-    
+
     group_id = update.effective_chat.id
 
     if group_id not in PLAYLISTS.keys():
