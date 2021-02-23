@@ -113,15 +113,18 @@ def add_song(update, context):
 def add_song_inline(update, context):
     args = (update.message.text).split(' ')
 
-    if len(args) < 2:
-        return
+    found_link = False
+    idx = -1
 
-    if len(args) > 2:
-        return
+    for i in range(len(args)):
+        seg = args[i]
+        if 'spotify.com/track/' in seg:
+            found_link = True
+            idx = i
+            break
 
-    if args[0] != '@spotidudebot':
+    if not found_link:
         return
-
 
     group_id = update.effective_chat.id
 
@@ -136,7 +139,7 @@ def add_song_inline(update, context):
         update.message.reply_text('ERROR ADDING SONG PLEASE NOTIFY ME')
         return
 
-    song = args[1]
+    song = args[i]
     song = get_track_id(song)
 
     if song == None:
